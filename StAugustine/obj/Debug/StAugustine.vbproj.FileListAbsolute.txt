@@ -1,0 +1,9 @@
+C:\Users\Teal\Documents\Visual Studio 2013\Projects\Work\StAugustine\StAugustine\bin\StAugustine.dll.config
+C:\Users\Teal\Documents\Visual Studio 2013\Projects\Work\StAugustine\StAugustine\bin\StAugustine.dll
+C:\Users\Teal\Documents\Visual Studio 2013\Projects\Work\StAugustine\StAugustine\bin\StAugustine.pdb
+C:\Users\Teal\Documents\Visual Studio 2013\Projects\Work\StAugustine\StAugustine\bin\StAugustine.xml
+C:\Users\Teal\Documents\Visual Studio 2013\Projects\Work\StAugustine\StAugustine\obj\Debug\StAugustine.Resources.resources
+C:\Users\Teal\Documents\Visual Studio 2013\Projects\Work\StAugustine\StAugustine\obj\Debug\StAugustine.vbproj.GenerateResource.Cache
+C:\Users\Teal\Documents\Visual Studio 2013\Projects\Work\StAugustine\StAugustine\obj\Debug\StAugustine.dll
+C:\Users\Teal\Documents\Visual Studio 2013\Projects\Work\StAugustine\StAugustine\obj\Debug\StAugustine.xml
+C:\Users\Teal\Documents\Visual Studio 2013\Projects\Work\StAugustine\StAugustine\obj\Debug\StAugustine.pdb

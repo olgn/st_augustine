@@ -1,0 +1,367 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <script src="Scripts/jquery-1.9.1.js"></script>
+    <link href="Content/bootstrap.css" rel="stylesheet" />
+    <link href="Content/bootstrap-theme.css" rel="stylesheet" />
+    <script src="Scripts/bootstrap.js"></script>
+    <script src="Scripts/d3/d3.js"></script>
+    <script src="Scripts/wellknown.js"></script>
+    <script src="Scripts/d3.hexbin.min.js"></script>
+    <script src="Scripts/d3/d3.timer.min.js"></script>
+    <link href="Content/Site.css" rel="stylesheet" />
+    <link href="Content/Sliders.css" rel="stylesheet" />
+    <script src="Scripts/d3.legend.js"></script>
+    <title>St. Augustine </title>
+</head>
+<body>
+
+    <h2>Annual St. Augustine Parcel Sales</h2>
+    <div class="map" id="map"></div>
+    <div id="subdivision">
+        <div class="radDiv">
+            <label>Radius:</label>
+            <output name="subdivision" id="radiusOutput">8</output>
+            <input id="radiusSlider" class="radSlider slider-control" type="range" min="1" max="12" value="8" />
+        </div>
+        <div class="frameSlider">
+            <output name="frame" id="ffOutput">0</output>
+            <input id="frameSlider" type="range" min="0" max="30" value="0" />
+        </div>
+        <div class="speedDiv">
+            <label>Speed:</label>
+            <output name="speed" id="ssOutput">0</output>
+            <input class="speedSlider slider-control" id="speedSlider" type="range" min="1" max="100" value="20" />
+        </div>
+    </div>
+
+
+
+    <script>
+
+        //create the margin of the window:
+        var scale = .8;
+        var margin = { top: scale * $(window).height() * .04, right: scale * $(window).width() * .02, bottom: scale * $(window).height() * .04, left: scale * $(window).width() * .02 },
+        width = scale * $(window).width() - margin.left - margin.right,
+        height = scale * $(window).height() - margin.top - margin.bottom;
+
+        var r = 8;
+        var f = 0;
+        var svg = d3.select(".map").append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .attr("style", "margin:auto;display:block;")
+                .append("g")
+                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+        var context = svg.node();
+        //input slider changes output via geodesic() function:
+
+        function rad(subdivision) {
+            $("#radiusOutput").val(subdivision);
+            r = subdivision;
+            $currentTarget = $thisFrame[l];
+            redraw($currentTarget);
+        };
+
+        function ff(q) {
+            $('#ffOutput').val(1989 + parseInt(q));
+            f = q;
+            $currentTarget = $thisFrame[q];
+            redraw($currentTarget);
+        }
+
+        //get the data (in wkt form) from the csv into json:
+        $data = [];
+        $points = [];
+        var csv = d3.csv("Content/pp.csv", function (d) {
+            //get the wkt string of the row:
+            $wkt = d.WKT;
+
+            //if the wkt string is not empty, create a json object:
+            if ($wkt !== "") {
+                $geojson = wellknown.parse($wkt);
+                $x = $geojson.coordinates[0];
+                $y = $geojson.coordinates[1];
+
+                return [$x, $y];
+            } else {
+                return //ow don't create json object
+            };
+        }, function (data) {
+            $data = data;
+            console.log("Got the points in there...");
+            var maxX = d3.max($data, function (d) {
+                return d[0];
+            });
+
+            var maxY = d3.max($data, function (d) {
+                return d[1];
+            });
+
+            var minX = d3.min($data, function (d) {
+                return d[0];
+            });
+
+            var minY = d3.min($data, function (d) {
+                return d[1];
+            });
+            var xScale = d3.scale.linear()
+                                   .domain([minX, maxX])
+                                   .range([0, width]);
+            var yScale = d3.scale.linear()
+                                    .domain([minY, maxY])
+                                    .range([0, height]);
+            $points = data;
+            for (i = 0; i < data.length; i++) {
+                $points[i][0] = xScale($data[i][0]);
+                $points[i][1] = yScale($data[i][1]);
+            };
+
+            console.log("Got them scaled...");
+        });
+        var step = 0;
+        function ss(num) {
+            var time = Math.floor(50000 / (4 * num));
+            $("#ssOutput").val(num);
+            step = time;
+            console.log(step);
+        };
+        $t = 0;
+        var l = 0;
+        function loop(s) {
+            var last = 0;
+            l = 0;
+            d3.timer(function (elapsed) {
+                if (elapsed - last > step) {
+                    last = elapsed;
+                    redraw($thisFrame[l]);
+                    if (step < 10000) {
+                        l++;
+                    }
+                    if (l >= $thisFrame.length) { l = 0; };
+                    svg.selectAll(".year").text((1989 + l)).attr("font-size", 20);
+                }
+            }, 100);
+        };
+
+        //the redraw function is called often to update requirements
+        function redraw(data, l) {
+            l = l || 0;
+            svg.selectAll(".gmap").remove();
+            var hexbin = d3.hexbin()
+            .size([width, height])
+            .radius(r);
+
+            var pts = [];
+            for (j = 0; j < data.length; j++) {
+                pts[j] = data[j].coords;
+            }
+
+                svg.append("g").attr("class", "gmap")
+            .selectAll(".hexagon")
+            .data(hexbin(pts))
+            .enter().append("path")
+            .attr("class", "hexagon")
+            .attr("d", hexbin.hexagon())
+            .attr("transform", function (d) {
+                return "translate(" + d.x + "," + d.y + ")";
+            })
+            .style("fill", function (d) { return $color(d.length) })
+            .attr("data-legend", function (d) { return legendText(d.length) })
+            .attr("data-legend-pos", function (d) { return legendOrder(d.length) })
+                var str = "";
+                str += $color(5);
+                str += $color(15);
+                str += $color(25);
+                str += $color(35);
+                str += $color(45);
+                str += $color(50);
+                console.log(str);
+            if (l == 0) {
+            } else {
+                var legend = svg.append("g").attr("class", "legend").style("font-size", "12px").attr("transform", "translate(7,30)").call(d3.legend);
+                setTimeout(function () {
+                    legend
+                        .attr("data-style-padding", 10)
+                    .call(d3.legend);
+                })
+            }
+        }
+        function legendOrder(arrLength) {
+            var text = "";
+            color = $color(arrLength);
+            switch (color) {
+                case "#ffffcc":
+                    order = 1;
+                    break;
+                case "#c7e9b4":
+                    order = 2;
+                    break;
+                case "#7fcdbb":
+                    order = 3;
+                    break;
+                case "#41b6c4":
+                    text = 4;
+                    break;
+                case "#2c7fb8":
+                    order = 5;
+                    break;
+                case "#253494":
+                    order = 6;
+                    break;
+                default:
+                    order = 1;
+                    break;
+            }
+            return order;
+        }
+        function legendText(arrLength) {
+            var text = "";
+            color = $color(arrLength);
+            switch (color) {
+                case "#ffffcc":
+                    text = "0-10";
+                    break;
+                case "#c7e9b4":
+                    text = "10-20";
+                    break;
+                case "#7fcdbb":
+                    text = "20-30";
+                    break;
+                case "#41b6c4":
+                    text = "30-40";
+                    break;
+                case "#2c7fb8":
+                    text = "40-50";
+                    break;
+                case "#253494":
+                    text = "50+";
+                    break;
+                default:
+                    text = "0-10";
+                    break;
+            }
+            return text;
+        }
+        //This section for clicking to zoom:
+        //
+
+        //function clicked(d) {
+        //    var x, y, k, centered;
+
+        //    if (d && centered !== d) {
+        //        x = d[0];
+        //        y = d[1];
+        //        k = 4;
+        //        centered = d;
+        //    } else {
+        //        x = width / 2;
+        //        y = height / 2;
+        //        k = 1;
+        //        centered = null;
+        //    }
+        //    d3.select("g").selectAll("path")
+        //  .classed("active", centered && function (d) { return d === centered; });
+
+        //    d3.select("g").transition()
+        //        .duration(750)
+        //        .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")scale(" + k + ")translate(" + -x + "," + -y + ")")
+        //        .style("stroke-width", 1.5 / k + "px");
+        //}
+
+        //This section for getting all the data from the json file, not just x,y:
+        var format = d3.time.format("%d/%m/%Y");
+        var csv = d3.csv("Content/pp.csv", function (d) {
+
+            //get the wkt string of the row:
+            $wkt = d.WKT;
+
+            //if the wkt string is not empty, create a json object:
+            if ($wkt !== "") {
+                $geojson = wellknown.parse($wkt);
+                $x = $geojson.coordinates[0];
+                $y = $geojson.coordinates[1];
+                return {
+                    parcelNo: d.parcelNo,
+                    issueDate: d.issueDate,
+                    sqft: d.sqft,
+                    hasSqft: d.hasSqft,
+                    propUseCd: d.propUseCd,
+                    coords: [$x, $y]
+                };
+            } else {
+                return //ow don't create json object
+            };
+        }, function (data) {
+            var datums = d3.nest()
+            .key(function (d) { return format.parse(d.issueDate).getUTCFullYear(); })
+            .rollup(function (d) {
+                return d;
+            })
+            .entries(data);
+            $thisFrame = [];
+            $data = datums;
+            for (i = 0; i < $data.length; i++) {
+                $thisFrame[i] = $data[i].values;
+                var maxX = d3.max($thisFrame[i], function (d) {
+                    return d.coords[0];
+                });
+
+                var maxY = d3.max($thisFrame[i], function (d) {
+                    return d.coords[1];
+                });
+
+                var minX = d3.min($thisFrame[i], function (d) {
+                    return d.coords[0];
+                });
+
+                var minY = d3.min($thisFrame[i], function (d) {
+                    return d.coords[1];
+                });
+                var xScale = d3.scale.linear()
+                                       .domain([minX, maxX])
+                                       .range([0, width]);
+                var yScale = d3.scale.linear()
+                                        .domain([minY, maxY])
+                                        .range([0, height]);
+
+                for (j = 0; j < $thisFrame[i].length; j++) {
+                    $thisFrame[i][j].coords[0] = xScale($thisFrame[i][j].coords[0]);
+                    $thisFrame[i][j].coords[1] = yScale($thisFrame[i][j].coords[1]);
+                };
+            }
+
+            $color = d3.scale.ordinal()
+            .domain([0, 10, 20, 30, 40, 50])
+            .range(['#ffffcc', '#c7e9b4', '#7fcdbb', '#41b6c4', '#2c7fb8', '#253494'])
+
+            svg.append("text").attr("class", "year");
+            console.log("Got them scaled...");
+            //animate($thisFrame);
+            redraw($thisFrame[0], 1);
+            loop(ss($('#speedSlider').val()));
+        });
+    </script>
+
+    <script>
+        $(document).ready(function () {
+
+            var input = d3.select("#radiusSlider")
+                        .on("input", function () { rad($("#radiusSlider").val()); })
+                        .on("change", function () { rad($("#radiusSlider").val()); })
+
+            var input = d3.select("#frameSlider")
+                    .on("input", function () { ff($("#frameSlider").val()); })
+                    .on("change", function () { ff($("#frameSlider").val()); })
+
+            var input = d3.select("#speedSlider")
+                .on("input", function () { ss($("#speedSlider").val()); })
+                .on("change", function () { ss($("#speedSlider").val()) })
+        })
+
+
+    </script>
+
+</body>
+</html>

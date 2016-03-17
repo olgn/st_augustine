@@ -1,0 +1,104 @@
+﻿body svg{
+    margin:auto;
+    max-height:100%;
+    padding:0;
+    margin:0;
+    border:0;
+    display:block;
+}
+
+h2 {
+    text-align:center;
+    display:block;
+    margin:auto;
+    margin-top:.5em;
+    margin-bottom: 1.5em;
+    font-family: "Walkway_Black" ,sans-serif;
+}
+
+.legend rect {
+  fill:white;
+  stroke:black;
+  opacity:0.8;}
+
+.well {
+    height:100%;
+    display:block;
+}
+
+#subdivision {
+  margin-top:.2em;
+  width:100%;
+  top: 4%;
+  left: 4%;
+}
+
+.radDiv {
+    float:left;
+    width:20%;
+    display:inline-block;
+    margin-left:1em;
+    margin-right:2em;
+}
+
+#subdivision .radSlider {
+    float:initial;
+    position:relative;
+    margin: 0 1em 0 1em;
+    width:55%;
+}
+
+#radiusOutput {
+    float:right;
+    margin:.15em 0 0 0;
+    padding:0 0 0 0;
+}
+
+.frameSlider {
+    width:75%;
+    float:right;
+    display:none;
+}
+
+.speedDiv {
+    width:75%;
+    display:inline-block;
+}
+
+#ssOutput {
+    padding:0 0 0 0;
+    float:right;
+}
+
+#subdivision .speedSlider {
+    margin:auto;
+    float:initial;
+    position:relative;
+    width:90%;
+}
+
+label {
+    float:left;
+    margin: .1em 1em 0 0;
+}
+
+input[type=range], output {
+    padding:0 0 0 0;
+    display: inline-block;
+}
+
+output {
+    font-weight:bold;
+    margin:.2em 0 0 0;
+}
+
+.hexagon {
+  fill: none;
+  stroke: #000;
+  stroke-width: .5px;
+}
+
+@font-face {
+    font-family: 'Walkway_Black';
+    src: url('Walkway_Oblique_SemiBold.ttf') format('truetype');
+}
