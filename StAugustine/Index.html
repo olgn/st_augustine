@@ -16,7 +16,7 @@
 </head>
 <body>
 
-    <h2>Annual St. Augustine Parcel Sales</h2>
+    <h2>St. Johns County Residential Building Permits</h2>
     <div class="map" id="map"></div>
     <div id="subdivision">
         <div class="radDiv">
@@ -167,16 +167,17 @@
             .attr("transform", function (d) {
                 return "translate(" + d.x + "," + d.y + ")";
             })
-            .style("fill", function (d) { return $color(d.length) })
+            .style("fill", function (d) { return color(d.length) })
             .attr("data-legend", function (d) { return legendText(d.length) })
             .attr("data-legend-pos", function (d) { return legendOrder(d.length) })
                 var str = "";
-                str += $color(5);
-                str += $color(15);
-                str += $color(25);
-                str += $color(35);
-                str += $color(45);
-                str += $color(50);
+                str += color(0);
+                str += color(7);
+                str += color(15);
+                str += color(25);
+                str += color(35);
+                str += color(45);
+                str += color(50);
                 console.log(str);
             if (l == 0) {
             } else {
@@ -188,26 +189,44 @@
                 })
             }
         }
+
+        function color(arrLength) {
+            var c = "";
+            if (arrLength <= 10){
+                c = "#294936";
+                return c;
+            } else
+            if (arrLength > 10 && arrLength <= 20) { c = "#88B169"; return c; } else 
+
+            if (arrLength <= 30 && arrLength > 20) {
+                c = '#DB995A';
+                return c;
+            } else      
+            if (arrLength > 30 && arrLength <= 40) { c = "#E54B4B"; return c;} else
+            if (arrLength > 40 && arrLength <= 50) { c = "#F7CE5B"; return c;} else
+           if (arrLength > 50) { c = "#931F1D"; return c;};
+            return c;
+        }
         function legendOrder(arrLength) {
             var text = "";
-            color = $color(arrLength);
-            switch (color) {
-                case "#ffffcc":
+            var  c = color(arrLength);
+            switch (c) {
+                case "#294936":
                     order = 1;
                     break;
-                case "#c7e9b4":
+                case "#88B169":
                     order = 2;
                     break;
-                case "#7fcdbb":
+                case "#DB995A":
                     order = 3;
                     break;
-                case "#41b6c4":
+                case "#F7CE5B":
                     text = 4;
                     break;
-                case "#2c7fb8":
+                case "#E54B4B":
                     order = 5;
                     break;
-                case "#253494":
+                case "#931F1D":
                     order = 6;
                     break;
                 default:
@@ -218,24 +237,24 @@
         }
         function legendText(arrLength) {
             var text = "";
-            color = $color(arrLength);
-            switch (color) {
-                case "#ffffcc":
+            var c = color(arrLength);
+            switch (c) {
+                case "#294936":
                     text = "0-10";
                     break;
-                case "#c7e9b4":
+                case "#88B169":
                     text = "10-20";
                     break;
-                case "#7fcdbb":
+                case "#DB995A":
                     text = "20-30";
                     break;
-                case "#41b6c4":
+                case "#F7CE5B":
                     text = "30-40";
                     break;
-                case "#2c7fb8":
+                case "#E54B4B":
                     text = "40-50";
                     break;
-                case "#253494":
+                case "#931F1D":
                     text = "50+";
                     break;
                 default:
@@ -334,12 +353,12 @@
 
             $color = d3.scale.ordinal()
             .domain([0, 10, 20, 30, 40, 50])
-            .range(['#ffffcc', '#c7e9b4', '#7fcdbb', '#41b6c4', '#2c7fb8', '#253494'])
+            .range(['#294936', '#DB995A', '#88B169', '#E54B4B', '#F7CE5B', '#931F1D'])
 
             svg.append("text").attr("class", "year");
             console.log("Got them scaled...");
             //animate($thisFrame);
-            redraw($thisFrame[0], 1);
+            redraw($thisFrame[4], 1);
             loop(ss($('#speedSlider').val()));
         });
     </script>
