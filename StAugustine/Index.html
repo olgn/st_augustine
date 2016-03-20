@@ -20,17 +20,18 @@
     <div id="subdivision">
         <div class="radDiv">
             <label>Radius:</label>
-            <output name="subdivision" id="radiusOutput">5</output>
             <input id="radiusSlider" class="radSlider slider-control" type="range" min="1" max="12" value="5" />
         </div>
         <div class="frameSlider">
-            <output name="frame" id="ffOutput">0</output>
             <input id="frameSlider" type="range" min="0" max="30" value="0" />
         </div>
         <div class="speedDiv">
             <label>Speed:</label>
-            <output name="speed" id="ssOutput">0</output>
             <input class="speedSlider slider-control" id="speedSlider" type="range" min="1" max="100" value="20" />
+        </div>
+        <div id="permitDropDown">
+            <label>Prop Code:</label>
+            <select id="permitTypes"></select>
         </div>
     </div>
     <script>
@@ -126,6 +127,9 @@
             })
             .entries(data);
 
+            //get all permit types and add to a dropdown:
+            d3.select("#permitTypes").append("option").text("All Types").attr("value","0");
+            d3.select("#permitTypes").selectAll("option").data(d3.map(data, function (d) { return d.propUseCd }).keys()).enter().append("option").text(function (d) { return d }).attr("value", function (d) { return d; })
             $pts = [];
             //scale the x and y coords of the data
             for (i = 0; i < datums.length; i++) {
@@ -151,10 +155,15 @@
             svg.selectAll(".gmap").remove();
             var hexbin = d3.hexbin().size([width, height]).radius(r);
 
+            var permit = $("#permitTypes").find("option:selected").val();
+            if (permit !== "0") {
+                p = p.filter(function (d) { return d.propUseCd == permit });
+            }
             var pts = [];
             for (j = 0; j < p.length; j++) {
                 pts[j] = p[j].coords;
             }
+
 
             svg.append("g").attr("class", "gmap").attr("transform", "translate(" + margin.left + "," + margin.top + ")")
             .selectAll(".hexagon")
@@ -163,30 +172,33 @@
             .attr("d", hexbin.hexagon())
             .attr("transform", function (d) { return "translate(" + d.x + "," + d.y + ")"; })
             .style("fill", function (d) { return color(d.length) })
-            .attr("data-legend", function (d) { return legendText(d.length) })
-            .attr("data-legend-pos", function (d) { return legendOrder(d.length) })
 
             //if leg toggled to 1, create a legend:
             if (leg !== 0) {
-                var legend = svg.append("g").attr("class", "legend").style("font-size", "12px").attr("transform", "translate(" + margin.left / 2 + "," + margin.top + ")")
-                legend.append("text").text("0-50").attr("y", "0em").attr("x", "1em");
-                legend.append("text").text("50-100").attr("y", "1em").attr("x", "1em");
-                legend.append("text").text("100-150").attr("y", "2em").attr("x", "1em");
-                legend.append("text").text("150-200").attr("y", "3em").attr("x", "1em");
-                legend.append("text").text("200-250").attr("y", "4em").attr("x", "1em");
-                legend.append("text").text("250+").attr("y", "5em").attr("x", "1em");
-                legend.append("circle").attr("cy", "-.25em").attr("cx", "0em").attr("r", ".4em").style("fill", "rgb(41, 73, 54)");
-                legend.append("circle").attr("cy", ".75em").attr("cx", "0em").attr("r", ".4em").style("fill", "rgb(136, 177, 105)");
-                legend.append("circle").attr("cy", "1.75em").attr("cx", "0em").attr("r", ".4em").style("fill", "rgb(247, 206, 91)");
-                legend.append("circle").attr("cy", "2.75em").attr("cx", "0em").attr("r", ".4em").style("fill", "rgb(219, 153, 90)");
-                legend.append("circle").attr("cy", "3.75em").attr("cx", "0em").attr("r", ".4em").style("fill", "rgb(229, 75, 75)");
-                legend.append("circle").attr("cy", "4.75em").attr("cx", "0em").attr("r", ".4em").style("fill", "rgb(147, 31, 29)");
-                legend.append("rect").attr("x", -10).attr("y", -15).attr("height", 83.625).attr("width", 75).style("fill", "none");
-                setTimeout(function () {
-                    legend
-                        .attr("data-style-padding", 10)
-                })
-            };
+                generateLegend();
+        }
+
+        //this function generates the legend:
+        function generateLegend() {
+            var legend = svg.append("g").attr("class", "legend").style("font-size", "12px").attr("transform", "translate(" + margin.left / 2 + "," + margin.top + ")")
+            legend.append("text").text("0-50").attr("y", "0em").attr("x", "1em");
+            legend.append("text").text("50-100").attr("y", "1em").attr("x", "1em");
+            legend.append("text").text("100-150").attr("y", "2em").attr("x", "1em");
+            legend.append("text").text("150-200").attr("y", "3em").attr("x", "1em");
+            legend.append("text").text("200-250").attr("y", "4em").attr("x", "1em");
+            legend.append("text").text("250+").attr("y", "5em").attr("x", "1em");
+            legend.append("circle").attr("cy", "-.25em").attr("cx", "0em").attr("r", ".4em").style("fill", "rgb(41, 73, 54)");
+            legend.append("circle").attr("cy", ".75em").attr("cx", "0em").attr("r", ".4em").style("fill", "rgb(136, 177, 105)");
+            legend.append("circle").attr("cy", "1.75em").attr("cx", "0em").attr("r", ".4em").style("fill", "rgb(247, 206, 91)");
+            legend.append("circle").attr("cy", "2.75em").attr("cx", "0em").attr("r", ".4em").style("fill", "rgb(219, 153, 90)");
+            legend.append("circle").attr("cy", "3.75em").attr("cx", "0em").attr("r", ".4em").style("fill", "rgb(229, 75, 75)");
+            legend.append("circle").attr("cy", "4.75em").attr("cx", "0em").attr("r", ".4em").style("fill", "rgb(147, 31, 29)");
+            legend.append("rect").attr("x", -10).attr("y", -15).attr("height", 83.625).attr("width", 75).style("fill", "none");
+            setTimeout(function () {
+                legend
+                    .attr("data-style-padding", 10)
+            })
+        };
         }
 
         //this function changes the radius of the hexagons in hexgrid on the "#radiusSlider" change:
@@ -224,80 +236,14 @@
         //this fn returns a color for hexbin based on number of points in a bin:
         function color(arrLength) {
             var c = "";
-            if (arrLength <= 50) {
-                c = "#294936";
-                return c;
-            } else
-                if (arrLength > 50 && arrLength <= 100) { c = "#88B169"; return c; } else
-
-                    if (arrLength <= 150 && arrLength > 100) {
-                        c = '#DB995A';
-                        return c;
-                    } else
-                        if (arrLength > 150 && arrLength <= 200) { c = "#E54B4B"; return c; } else
-                            if (arrLength > 200 && arrLength <= 250) { c = "#F7CE5B"; return c; } else
-                                if (arrLength > 250) { c = "#931F1D"; return c; };
-            return c;
+            if (arrLength <= 50) {c = "#294936"; return c;} else
+            if (arrLength > 50 && arrLength <= 100) { c = "#88B169"; return c; } else
+            if (arrLength <= 150 && arrLength > 100) { c = '#DB995A'; return c;} else
+            if (arrLength > 150 && arrLength <= 200) { c = "#E54B4B"; return c; } else
+            if (arrLength > 200 && arrLength <= 250) { c = "#F7CE5B"; return c; } else
+            if (arrLength > 250) { c = "#931F1D"; return c; };
         }
 
-        //this fn returns an order for the legend based on number of points in a bin:
-        function legendOrder(arrLength) {
-            var order = 0;
-            var c = color(arrLength);
-            switch (c) {
-                case "#294936":
-                    order = 0;
-                    break;
-                case "#88B169":
-                    order = 1;
-                    break;
-                case "#DB995A":
-                    order = 2;
-                    break;
-                case "#F7CE5B":
-                    text = 3;
-                    break;
-                case "#E54B4B":
-                    order = 4;
-                    break;
-                case "#931F1D":
-                    order = 5;
-                    break;
-                default:
-                    break;
-            }
-            return order;
-        }
-
-        //this fn returns the text of the legend based on number of points in a bin:
-        function legendText(arrLength) {
-            var text = "";
-            var c = color(arrLength);
-            switch (c) {
-                case "#294936":
-                    text = "0-10";
-                    break;
-                case "#88B169":
-                    text = "10-20";
-                    break;
-                case "#DB995A":
-                    text = "20-30";
-                    break;
-                case "#F7CE5B":
-                    text = "30-40";
-                    break;
-                case "#E54B4B":
-                    text = "40-50";
-                    break;
-                case "#931F1D":
-                    text = "50+";
-                    break;
-                default:
-                    text = "0-10";
-                    break;
-            }
-            return text;
-        }
     </script>
     <script>
         $(document).ready(function () {
