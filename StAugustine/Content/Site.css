@@ -1,4 +1,4 @@
-﻿body svg{
+body svg{
     margin:auto;
     max-height:100%;
     padding:0;
@@ -55,13 +55,13 @@ h2 {
 }
 
 .frameSlider {
-    width:75%;
+    width:50%;
     float:right;
     display:none;
 }
 
 .speedDiv {
-    width:75%;
+    width:45%;
     display:inline-block;
 }
 
@@ -74,7 +74,20 @@ h2 {
     margin:auto;
     float:initial;
     position:relative;
-    width:90%;
+    width:80%;
+}
+
+#subdivision #permitDropDown {
+    margin:auto;
+    float:right;
+    display:inline-block;
+    width:30%;
+}
+
+
+#permitDropDown select {
+    max-width:25%;
+    width:25%;
 }
 
 label {
