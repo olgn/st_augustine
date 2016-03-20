@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+.<!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
     <script src="Scripts/jquery-1.9.1.js"></script>
@@ -12,17 +12,16 @@
     <link href="Content/Site.css" rel="stylesheet" />
     <link href="Content/Sliders.css" rel="stylesheet" />
     <script src="Scripts/d3.legend.js"></script>
-    <title>St. Augustine </title>
+    <title>St. Augustine</title>
 </head>
 <body>
-
     <h2>St. Johns County Residential Building Permits</h2>
-    <div class="map" id="map"></div>
+    <div class="map"></div>
     <div id="subdivision">
         <div class="radDiv">
             <label>Radius:</label>
-            <output name="subdivision" id="radiusOutput">8</output>
-            <input id="radiusSlider" class="radSlider slider-control" type="range" min="1" max="12" value="8" />
+            <output name="subdivision" id="radiusOutput">5</output>
+            <input id="radiusSlider" class="radSlider slider-control" type="range" min="1" max="12" value="5" />
         </div>
         <div class="frameSlider">
             <output name="frame" id="ffOutput">0</output>
@@ -34,207 +33,243 @@
             <input class="speedSlider slider-control" id="speedSlider" type="range" min="1" max="100" value="20" />
         </div>
     </div>
-
-
-
     <script>
+        //Declare variables in this section:
+        var scaleWindow = .8, scaleVertical = .04, scaleHorizontal = .3, //window, vertical, and horizontal scaling factors
+            w = $(window).width(), h = $(window).height(), //height and width of window
+            margin = {
+                top: scaleWindow * h * scaleVertical,
+                right: scaleWindow * w * scaleHorizontal,
+                bottom: scaleWindow * h * scaleVertical,
+                left: scaleWindow * w * scaleHorizontal
+            }, //set margin to scaled screen properties
+            width = scaleWindow * w - margin.left - margin.right, // get map width (screen  width - margins)
+            height = scaleWindow * h - margin.top - margin.bottom, //get map height (screen height - margins)
+            r = 5, //initial radius of the hexagons
+            svg = d3.select(".map").append("svg") //put an svg element on the .map div
+                .attr("width", scaleWindow * w).attr("height", scaleWindow * h) //set dimensions of svg element
+                .attr("style", "margin:auto;display:block;") //set styling of svg
+                .append("g") //put a g element on the svg element
+                //.attr("transform", "translate(" + margin.left / 2 + "," + margin.top + ")"), //put it in margins
+                , data = [], //holds all points
+                scaledCountyData = [], //holds county polygon data
+                scaledWaterData = [], //holds water polygon data
+                scaledPointData = [], //holds scaled point data
+                frames = [], //holds ith year since 1989 in frames[i]
+                points = [], //??
+                wkt = "", //holds well wellknown point rep of object
+                geojson,
+                xScale, yScale, l, step;
 
-        //create the margin of the window:
-        var scale = .8;
-        var margin = { top: scale * $(window).height() * .04, right: scale * $(window).width() * .02, bottom: scale * $(window).height() * .04, left: scale * $(window).width() * .02 },
-        width = scale * $(window).width() - margin.left - margin.right,
-        height = scale * $(window).height() - margin.top - margin.bottom;
+        var format = d3.time.format("%d/%m/%Y");
 
-        var r = 8;
-        var f = 0;
-        var svg = d3.select(".map").append("svg")
-                .attr("width", width + margin.left + margin.right)
-                .attr("height", height + margin.top + margin.bottom)
-                .attr("style", "margin:auto;display:block;")
-                .append("g")
-                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-        var context = svg.node();
-        //input slider changes output via geodesic() function:
-
-        function rad(subdivision) {
-            $("#radiusOutput").val(subdivision);
-            r = subdivision;
-            $currentTarget = $thisFrame[l];
-            redraw($currentTarget);
-        };
-
-        function ff(q) {
-            $('#ffOutput').val(1989 + parseInt(q));
-            f = q;
-            $currentTarget = $thisFrame[q];
-            redraw($currentTarget);
-        }
-
-        //get the data (in wkt form) from the csv into json:
-        $data = [];
-        $points = [];
-        var csv = d3.csv("Content/pp.csv", function (d) {
-            //get the wkt string of the row:
-            $wkt = d.WKT;
-
-            //if the wkt string is not empty, create a json object:
-            if ($wkt !== "") {
-                $geojson = wellknown.parse($wkt);
-                $x = $geojson.coordinates[0];
-                $y = $geojson.coordinates[1];
-
-                return [$x, $y];
+        //Display county boundaries / Generate scale from county boundaries:
+        var county = d3.csv("Content/county_clip.csv", function (d) {
+            wkt = d.WKT;
+            if (wkt !== "") {
+                geojson = wellknown.parse(wkt); //use wellknown.js to parst the wkt value into a geoJson object
+                return geojson
             } else {
-                return //ow don't create json object
+                return;
             };
         }, function (data) {
-            $data = data;
-            console.log("Got the points in there...");
-            var maxX = d3.max($data, function (d) {
-                return d[0];
-            });
+            svg.append("g") //create new g element with class county, translate to match margins
+                .attr("class", "county")
+                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-            var maxY = d3.max($data, function (d) {
-                return d[1];
-            });
+            var maxX = d3.max(data[0].coordinates[0], function (d) { return d[0] }), //max X coord
+                minX = d3.min(data[0].coordinates[0], function (d) { return d[0] }), // min X coord
+                maxY = d3.max(data[0].coordinates[0], function (d) { return d[1] }), // max Y coord
+                minY = d3.min(data[0].coordinates[0], function (d) { return d[1] }); // min Y coord
 
-            var minX = d3.min($data, function (d) {
-                return d[0];
-            });
+            xScale = d3.scale.linear().domain([minX, maxX]).range([0, width]); // horizontal scale from county minX/maxX
+            yScale = d3.scale.linear().domain([maxY, minY]).range([0, height]); //vertical scale from county minY/maxY
 
-            var minY = d3.min($data, function (d) {
-                return d[1];
-            });
-            var xScale = d3.scale.linear()
-                                   .domain([minX, maxX])
-                                   .range([0, width]);
-            var yScale = d3.scale.linear()
-                                    .domain([minY, maxY])
-                                    .range([0, height]);
-            $points = data;
-            for (i = 0; i < data.length; i++) {
-                $points[i][0] = xScale($data[i][0]);
-                $points[i][1] = yScale($data[i][1]);
+            scaledCountyData = data[0];
+            for (i = 0; i < data[0].coordinates[0].length; i++) {
+                scaledCountyData.coordinates[0][i][0] = xScale(scaledCountyData.coordinates[0][i][0]); //scale X coord
+                scaledCountyData.coordinates[0][i][1] = yScale(scaledCountyData.coordinates[0][i][1]); //scale Y coord
             };
 
-            console.log("Got them scaled...");
+
+            svg.selectAll(".county").append("polygon").attr("points", scaledCountyData.coordinates[0]) //append the county polygon
+                .attr("stroke", "black") //change polygon stroke color
+                .attr("fill", "#a1886e") // change polygon background color
         });
-        var step = 0;
-        function ss(num) {
-            var time = Math.floor(50000 / (4 * num));
-            $("#ssOutput").val(num);
-            step = time;
-            console.log(step);
+
+
+
+        //Display point hexagons:
+        var pts_clip = d3.csv("Content/pts_clip.csv", function (d) {
+            wkt = d.WKT
+
+            if (wkt !== "") {
+                geojson = wellknown.parse(wkt);
+                return {
+                    parcelNo: d.parcelNo,
+                    issueDate: d.issueDate,
+                    sqft: d.sqft,
+                    hasSqft: d.hasSqft,
+                    propUseCd: d.propUseCd,
+                    coords: geojson.coordinates
+                };
+            } else {
+                return;
+            };
+        }, function (data) {
+
+            var datums = d3.nest()
+            .key(function (d) { return format.parse(d.issueDate).getUTCFullYear(); })
+            .rollup(function (d) {
+                return d;
+            })
+            .entries(data);
+
+            $pts = [];
+            //scale the x and y coords of the data
+            for (i = 0; i < datums.length; i++) {
+                for (j = 0; j < datums[i].values.length; j++) {
+                    datums[i].values[j].coords = [xScale(datums[i].values[j].coords[0]), yScale(datums[i].values[j].coords[1])];
+                }
+            }
+
+            //put the points in a cumulative fashion in different frames of points. eg: points[2] includes all points in points[0],points[1], and points[2], indicating pts from 1989-1991.
+            $pts[0] = datums[0].values;
+            for (i = 0; i < datums.length - 1 ; i++) {
+                $pts[i + 1] = $pts[i].concat(datums[i + 1].values);
+            }
+            points = $pts;
+
+            svg.append("text").attr("class", "year").text("1989").attr("transform", "translate(" + (margin.left) + "," + margin.top + ")").style("font-size", 20); //append the year text to the svg
+            redraw(points[5], 1); //redraw the points with "legend" set to 1 (redraws with legend)
+            loop(ss($("#speedSlider").val())); //start the looping with the current speedSlider value
+        });
+
+        function redraw(p, leg) {
+            leg = leg || 0;
+            svg.selectAll(".gmap").remove();
+            var hexbin = d3.hexbin().size([width, height]).radius(r);
+
+            var pts = [];
+            for (j = 0; j < p.length; j++) {
+                pts[j] = p[j].coords;
+            }
+
+            svg.append("g").attr("class", "gmap").attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+            .selectAll(".hexagon")
+            .data(hexbin(pts)).enter().append("path")
+            .attr("class", "hexagon")
+            .attr("d", hexbin.hexagon())
+            .attr("transform", function (d) { return "translate(" + d.x + "," + d.y + ")"; })
+            .style("fill", function (d) { return color(d.length) })
+            .attr("data-legend", function (d) { return legendText(d.length) })
+            .attr("data-legend-pos", function (d) { return legendOrder(d.length) })
+
+            //if leg toggled to 1, create a legend:
+            if (leg !== 0) {
+                var legend = svg.append("g").attr("class", "legend").style("font-size", "12px").attr("transform", "translate(" + margin.left / 2 + "," + margin.top + ")")
+                legend.append("text").text("0-50").attr("y", "0em").attr("x", "1em");
+                legend.append("text").text("50-100").attr("y", "1em").attr("x", "1em");
+                legend.append("text").text("100-150").attr("y", "2em").attr("x", "1em");
+                legend.append("text").text("150-200").attr("y", "3em").attr("x", "1em");
+                legend.append("text").text("200-250").attr("y", "4em").attr("x", "1em");
+                legend.append("text").text("250+").attr("y", "5em").attr("x", "1em");
+                legend.append("circle").attr("cy", "-.25em").attr("cx", "0em").attr("r", ".4em").style("fill", "rgb(41, 73, 54)");
+                legend.append("circle").attr("cy", ".75em").attr("cx", "0em").attr("r", ".4em").style("fill", "rgb(136, 177, 105)");
+                legend.append("circle").attr("cy", "1.75em").attr("cx", "0em").attr("r", ".4em").style("fill", "rgb(247, 206, 91)");
+                legend.append("circle").attr("cy", "2.75em").attr("cx", "0em").attr("r", ".4em").style("fill", "rgb(219, 153, 90)");
+                legend.append("circle").attr("cy", "3.75em").attr("cx", "0em").attr("r", ".4em").style("fill", "rgb(229, 75, 75)");
+                legend.append("circle").attr("cy", "4.75em").attr("cx", "0em").attr("r", ".4em").style("fill", "rgb(147, 31, 29)");
+                legend.append("rect").attr("x", -10).attr("y", -15).attr("height", 83.625).attr("width", 75).style("fill", "none");
+                setTimeout(function () {
+                    legend
+                        .attr("data-style-padding", 10)
+                })
+            };
+        }
+
+        //this function changes the radius of the hexagons in hexgrid on the "#radiusSlider" change:
+        function rad(subdivision) {
+            $("#radiusOutput").val(subdivision); //set the output val to that of radiusSlider
+            r = subdivision; //set the radius to input
+            redraw(points[l]); //redraw the current target
         };
-        $t = 0;
-        var l = 0;
+
+        //this function changes the speed of the loop, on the "#speedSlider" change:
+        function ss(num) {
+            var time = Math.floor(50000 / (4 * num)); //establish the delay in ms based on input
+            $("#ssOutput").val(num); //set the output val to that of speedSlider
+            step = time; //set the step val for loop() function
+            console.log(step); //let us know
+        };
+
+        //this fn is called once, and sets the looping in motion:
         function loop(s) {
             var last = 0;
-            l = 0;
+            l = 0; //set frame to first one
             d3.timer(function (elapsed) {
                 if (elapsed - last > step) {
                     last = elapsed;
-                    redraw($thisFrame[l]);
+                    redraw(points[l]);
                     if (step < 10000) {
-                        l++;
+                        l++; //update the frame as long as we don't have the slider in "pause" territory
                     }
-                    if (l >= $thisFrame.length) { l = 0; };
-                    svg.selectAll(".year").text((1989 + l)).attr("font-size", 20);
+                    if (l >= points.length) { l = 0; };
+                    svg.selectAll(".year").text((1989 + l)).attr("font-size", 20); //update the year text on frame change
                 }
             }, 100);
         };
 
-        //the redraw function is called often to update requirements
-        function redraw(data, l) {
-            l = l || 0;
-            svg.selectAll(".gmap").remove();
-            var hexbin = d3.hexbin()
-            .size([width, height])
-            .radius(r);
-
-            var pts = [];
-            for (j = 0; j < data.length; j++) {
-                pts[j] = data[j].coords;
-            }
-
-                svg.append("g").attr("class", "gmap")
-            .selectAll(".hexagon")
-            .data(hexbin(pts))
-            .enter().append("path")
-            .attr("class", "hexagon")
-            .attr("d", hexbin.hexagon())
-            .attr("transform", function (d) {
-                return "translate(" + d.x + "," + d.y + ")";
-            })
-            .style("fill", function (d) { return color(d.length) })
-            .attr("data-legend", function (d) { return legendText(d.length) })
-            .attr("data-legend-pos", function (d) { return legendOrder(d.length) })
-                var str = "";
-                str += color(0);
-                str += color(7);
-                str += color(15);
-                str += color(25);
-                str += color(35);
-                str += color(45);
-                str += color(50);
-                console.log(str);
-            if (l == 0) {
-            } else {
-                var legend = svg.append("g").attr("class", "legend").style("font-size", "12px").attr("transform", "translate(7,30)").call(d3.legend);
-                setTimeout(function () {
-                    legend
-                        .attr("data-style-padding", 10)
-                    .call(d3.legend);
-                })
-            }
-        }
-
+        //this fn returns a color for hexbin based on number of points in a bin:
         function color(arrLength) {
             var c = "";
-            if (arrLength <= 10){
+            if (arrLength <= 50) {
                 c = "#294936";
                 return c;
             } else
-            if (arrLength > 10 && arrLength <= 20) { c = "#88B169"; return c; } else 
+                if (arrLength > 50 && arrLength <= 100) { c = "#88B169"; return c; } else
 
-            if (arrLength <= 30 && arrLength > 20) {
-                c = '#DB995A';
-                return c;
-            } else      
-            if (arrLength > 30 && arrLength <= 40) { c = "#E54B4B"; return c;} else
-            if (arrLength > 40 && arrLength <= 50) { c = "#F7CE5B"; return c;} else
-           if (arrLength > 50) { c = "#931F1D"; return c;};
+                    if (arrLength <= 150 && arrLength > 100) {
+                        c = '#DB995A';
+                        return c;
+                    } else
+                        if (arrLength > 150 && arrLength <= 200) { c = "#E54B4B"; return c; } else
+                            if (arrLength > 200 && arrLength <= 250) { c = "#F7CE5B"; return c; } else
+                                if (arrLength > 250) { c = "#931F1D"; return c; };
             return c;
         }
+
+        //this fn returns an order for the legend based on number of points in a bin:
         function legendOrder(arrLength) {
-            var text = "";
-            var  c = color(arrLength);
+            var order = 0;
+            var c = color(arrLength);
             switch (c) {
                 case "#294936":
-                    order = 1;
+                    order = 0;
                     break;
                 case "#88B169":
-                    order = 2;
+                    order = 1;
                     break;
                 case "#DB995A":
-                    order = 3;
+                    order = 2;
                     break;
                 case "#F7CE5B":
-                    text = 4;
+                    text = 3;
                     break;
                 case "#E54B4B":
-                    order = 5;
+                    order = 4;
                     break;
                 case "#931F1D":
-                    order = 6;
+                    order = 5;
                     break;
                 default:
-                    order = 1;
                     break;
             }
             return order;
         }
+
+        //this fn returns the text of the legend based on number of points in a bin:
         function legendText(arrLength) {
             var text = "";
             var c = color(arrLength);
@@ -263,106 +298,7 @@
             }
             return text;
         }
-        //This section for clicking to zoom:
-        //
-
-        //function clicked(d) {
-        //    var x, y, k, centered;
-
-        //    if (d && centered !== d) {
-        //        x = d[0];
-        //        y = d[1];
-        //        k = 4;
-        //        centered = d;
-        //    } else {
-        //        x = width / 2;
-        //        y = height / 2;
-        //        k = 1;
-        //        centered = null;
-        //    }
-        //    d3.select("g").selectAll("path")
-        //  .classed("active", centered && function (d) { return d === centered; });
-
-        //    d3.select("g").transition()
-        //        .duration(750)
-        //        .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")scale(" + k + ")translate(" + -x + "," + -y + ")")
-        //        .style("stroke-width", 1.5 / k + "px");
-        //}
-
-        //This section for getting all the data from the json file, not just x,y:
-        var format = d3.time.format("%d/%m/%Y");
-        var csv = d3.csv("Content/pp.csv", function (d) {
-
-            //get the wkt string of the row:
-            $wkt = d.WKT;
-
-            //if the wkt string is not empty, create a json object:
-            if ($wkt !== "") {
-                $geojson = wellknown.parse($wkt);
-                $x = $geojson.coordinates[0];
-                $y = $geojson.coordinates[1];
-                return {
-                    parcelNo: d.parcelNo,
-                    issueDate: d.issueDate,
-                    sqft: d.sqft,
-                    hasSqft: d.hasSqft,
-                    propUseCd: d.propUseCd,
-                    coords: [$x, $y]
-                };
-            } else {
-                return //ow don't create json object
-            };
-        }, function (data) {
-            var datums = d3.nest()
-            .key(function (d) { return format.parse(d.issueDate).getUTCFullYear(); })
-            .rollup(function (d) {
-                return d;
-            })
-            .entries(data);
-            $thisFrame = [];
-            $data = datums;
-            for (i = 0; i < $data.length; i++) {
-                $thisFrame[i] = $data[i].values;
-                var maxX = d3.max($thisFrame[i], function (d) {
-                    return d.coords[0];
-                });
-
-                var maxY = d3.max($thisFrame[i], function (d) {
-                    return d.coords[1];
-                });
-
-                var minX = d3.min($thisFrame[i], function (d) {
-                    return d.coords[0];
-                });
-
-                var minY = d3.min($thisFrame[i], function (d) {
-                    return d.coords[1];
-                });
-                var xScale = d3.scale.linear()
-                                       .domain([minX, maxX])
-                                       .range([0, width]);
-                var yScale = d3.scale.linear()
-                                        .domain([minY, maxY])
-                                        .range([0, height]);
-
-                for (j = 0; j < $thisFrame[i].length; j++) {
-                    $thisFrame[i][j].coords[0] = xScale($thisFrame[i][j].coords[0]);
-                    $thisFrame[i][j].coords[1] = yScale($thisFrame[i][j].coords[1]);
-                };
-            }
-
-            $color = d3.scale.ordinal()
-            .domain([0, 10, 20, 30, 40, 50])
-            .range(['#294936', '#DB995A', '#88B169', '#E54B4B', '#F7CE5B', '#931F1D'])
-
-            svg.append("text").attr("class", "year");
-            console.log("Got them scaled...");
-            //animate($thisFrame);
-            redraw($thisFrame[4], 1);
-            loop(ss($('#speedSlider').val()));
-        });
     </script>
-
     <script>
         $(document).ready(function () {
 
