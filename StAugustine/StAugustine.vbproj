@@ -85,8 +85,11 @@
     <Content Include="Content\bootstrap-theme.min.css" />
     <Content Include="Content\bootstrap.css" />
     <Content Include="Content\bootstrap.min.css" />
+    <Content Include="Content\county_clip.csv" />
+    <Content Include="Content\pts_clip.csv" />
     <Content Include="Content\Site.css" />
     <Content Include="Content\Sliders.css" />
+    <Content Include="Content\water_clip.csv" />
     <Content Include="fonts\glyphicons-halflings-regular.svg" />
     <Content Include="Index.html" />
     <Content Include="packages.config" />
