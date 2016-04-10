@@ -32,8 +32,8 @@
         <div id="sqftDropDown">
             <label>Has Sqft:</label>
             <select class="hasSqft" id="hasSqft">
-                <option selected value="5">--</option>
-                <option value="1">Y</option>
+                <option value="5">--</option>
+                <option selected value="1">Y</option>
                 <option value="0">N</option>
             </select>
         </div>
@@ -78,10 +78,11 @@
                 //.attr("transform", "translate(" + margin.left / 2 + "," + margin.top + ")"), //put it in margins
                 , data = [], //holds all points
                 scaledCountyData = [], //holds county polygon data
+                scaledCityData = [], //holds city polygon data
                 scaledWaterData = [], //holds water polygon data
                 scaledPointData = [], //holds scaled point data
                 frames = [], //holds ith year since 1989 in frames[i]
-                points = [], //??
+                //points = [], //??
                 wkt = "", //holds well wellknown point rep of object
                 geojson,
                 xScale, yScale, l, step;
@@ -92,8 +93,10 @@
         var color_Scale = [0, 50, 100, 150, 200, 250];
         var color_Array = ["#294936", "#88B169", "#F7CE5B", '#DB995A', "#E54B4B", "#931F1D"];
 
-        //Display county boundaries / Generate scale from county boundaries:
-        var county = d3.csv("Content/county_clip.csv", function (d) {
+
+        
+        //generate county: 
+        var county = d3.csv("Content/simple_county.csv", function (d) {
             wkt = d.WKT;
             if (wkt !== "") {
                 geojson = wellknown.parse(wkt); //use wellknown.js to parst the wkt value into a geoJson object
@@ -126,57 +129,127 @@
                 .attr("fill", "#a8ddb5") // change polygon background color
         });
 
-
-
-        //Display point hexagons:
-        var pts_clip = d3.csv("Content/pts_clip.csv", function (d) {
-            wkt = d.WKT
-
-            if (wkt !== "") {
-                geojson = wellknown.parse(wkt);
-                return {
-                    parcelNo: d.parcelNo,
-                    issueDate: d.issueDate,
-                    sqft: d.sqft,
-                    hasSqft: d.hasSqft,
-                    propUseCd: d.propUseCd,
-                    coords: geojson.coordinates
+            //Display county boundaries / Generate scale from county boundaries:
+            var city = d3.csv("Content/simple_city.csv", function (d) {
+                wkt = d.WKT;
+                if (wkt !== "") {
+                    geojson = wellknown.parse(wkt); //use wellknown.js to parst the wkt value into a geoJson object
+                    return geojson
+                } else {
+                    return;
                 };
-            } else {
-                return;
-            };
-        }, function (data) {
+            }, function (data) {
+                svg.append("g") //create new g element with class county, translate to match margins
+                    .attr("class", "city")
+                    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-            var datums = d3.nest()
-            .key(function (d) { return format.parse(d.issueDate).getUTCFullYear(); })
-            .rollup(function (d) {
-                return d;
-            })
-            .entries(data);
-
-            //get all permit types and add to a dropdown:
-            d3.select("#permitTypes").append("option").text("All Types").attr("value", "0");
-            d3.select("#permitTypes").selectAll("option").data(d3.map(data, function (d) { return d.propUseCd }).keys()).enter().append("option").text(function (d) { return d }).attr("value", function (d) { return d; })
-
-            $pts = [];
-            //scale the x and y coords of the data
-            for (i = 0; i < datums.length; i++) {
-                for (j = 0; j < datums[i].values.length; j++) {
-                    datums[i].values[j].coords = [xScale(datums[i].values[j].coords[0]), yScale(datums[i].values[j].coords[1])];
+                scaledCityData = data;
+                for (j = 0; j < data.length; j++) {
+                    for (i = 0; i < data[j].coordinates[0].length; i++) {
+                        for (k = 0; k < data[j].coordinates[0][i].length; k++) {
+                            scaledCityData[j].coordinates[0][i][k][0] = xScale(scaledCityData[j].coordinates[0][i][k][0]); //scale X coord
+                            scaledCityData[j].coordinates[0][i][k][1] = yScale(scaledCityData[j].coordinates[0][i][k][1]); //scale Y coord
+                        }
+                        scaledCityData[j].coordinates[0][i][k];
+                    };
                 }
-            }
+            
 
-            //put the points in a cumulative fashion in different frames of points. eg: points[2] includes all points in points[0],points[1], and points[2], indicating pts from 1989-1991.
-            $pts[0] = datums[0].values;
-            for (i = 0; i < datums.length - 1 ; i++) {
-                $pts[i + 1] = $pts[i].concat(datums[i + 1].values);
-            }
-            points = $pts;
+                for (i = 0; i < data.length; i ++) {
+                    for (j=0; j< data[i].coordinates[0].length; j++) {
+                        svg.selectAll(".city").append("polygon").attr("points", scaledCityData[i].coordinates[0][j]) //append the county polygon
+                    .attr("stroke", "black") //change polygon stroke color
+                    .attr("fill", "#dec1e6") // change polygon background color
+                    }
+                }
+            
+            });
 
-            svg.append("text").attr("class", "year").text("1989").attr("transform", "translate(" + (margin.left) + "," + margin.top + ")").style("font-size", 20); //append the year text to the svg
-            redraw(points[0], 1); //redraw the points with "legend" set to 1 (redraws with legend)
-            loop(ss($("#speedSlider").val())); //start the looping with the current speedSlider value
-        });
+            //Display county boundaries / Generate scale from county boundaries:
+            var roads = d3.csv("Content/simple_road.csv", function (d) {
+                wkt = d.WKT;
+                if (wkt !== "") {
+                    geojson = wellknown.parse(wkt); //use wellknown.js to parst the wkt value into a geoJson object
+                    return geojson
+                } else {
+                    return;
+                };
+            }, function (data) {
+                svg.append("g") //create new g element with class county, translate to match margins
+                    .attr("class", "road")
+                    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+                scaledRoadData = data;
+                for (j = 0; j < data.length; j++) {
+                    for (i = 0; i < data[j].coordinates[0].length; i++) {
+                            scaledRoadData[j].coordinates[0][i][0] = xScale(scaledRoadData[j].coordinates[0][i][0]); //scale X coord
+                            scaledRoadData[j].coordinates[0][i][1] = yScale(scaledRoadData[j].coordinates[0][i][1]); //scale Y coord
+                    };
+                }
+
+
+                for (i = 0; i < data.length; i++) {
+                    for (j = 0; j < data[i].coordinates[0].length-1; j++)
+                    svg.selectAll(".road").append("line")
+                        .attr("x1", scaledRoadData[i].coordinates[0][j][0]) //append the rd x1
+                        .attr("x2", scaledRoadData[i].coordinates[0][j+1][0]) //append the rd x2
+                        .attr("y1", scaledRoadData[i].coordinates[0][j][1]) //append the rd y1
+                        .attr("y2", scaledRoadData[i].coordinates[0][j+1][1]) //append the rd y2
+                    .attr("stroke", "#ff9999") //change polygon stroke color
+                    .attr("stroke-width","2")
+                    }
+            });
+
+
+
+            //Display point hexagons:
+            var pts_clip = d3.csv("Content/simple_pts.csv", function (d) {
+                wkt = d.WKT
+
+                if (wkt !== "") {
+                    geojson = wellknown.parse(wkt);
+                    return {
+                        issueDate: d.issueDate,
+                        sqft: d.sqft,
+                        hasSqft: d.hasSqft,
+                        propUseCd: d.propUseCd,
+                        coords: geojson.coordinates
+                    };d
+                } else {
+                    return;
+                };
+            }, function (data) {
+
+                var datums = d3.nest()
+                .key(function (d) { return format.parse(d.issueDate).getUTCFullYear(); })
+                .rollup(function (d) {
+                    return d;
+                })
+                .entries(data);
+
+                //get all permit types and add to a dropdown:
+                d3.select("#permitTypes").append("option").text("All Types").attr("value", "0");
+                d3.select("#permitTypes").selectAll("option").data(d3.map(data, function (d) { return d.propUseCd }).keys()).enter().append("option").text(function (d) { return d }).attr("value", function (d) { return d; })
+
+                $pts = [];
+                //scale the x and y coords of the data
+                for (i = 0; i < datums.length; i++) {
+                    for (j = 0; j < datums[i].values.length; j++) {
+                        datums[i].values[j].coords = [xScale(datums[i].values[j].coords[0]), yScale(datums[i].values[j].coords[1])];
+                    }
+                }
+
+                //put the points in a cumulative fashion in different frames of points. eg: points[2] includes all points in points[0],points[1], and points[2], indicating pts from 1989-1991.
+                $pts[0] = datums[0].values;
+                for (i = 0; i < datums.length - 1 ; i++) {
+                    $pts[i + 1] = $pts[i].concat(datums[i + 1].values);
+                }
+                points = $pts;
+
+                svg.append("text").attr("class", "year").text("1989").attr("transform", "translate(" + (margin.left) + "," + margin.top + ")").style("font-size", 20); //append the year text to the svg
+                redraw(points[0], 1); //redraw the points with "legend" set to 1 (redraws with legend)
+                loop(ss($("#speedSlider").val())); //start the looping with the current speedSlider value
+            });
 
         function redraw(p, leg) {
             leg = leg || 0;
@@ -207,8 +280,10 @@
             .attr("d", hexbin.hexagon())
             .attr("transform", function (d) { return "translate(" + d.x + "," + d.y + ")"; })
             .style("fill", function (d) { return color(d.length) })
-            .style("stroke-width",function(d) {return borderSwitch(d.length)})
-
+            .style("stroke-width", function (d) { return "1px" })
+            .style("stroke",function(d) {return color(d.length)})
+            .style("opacity", function (d) { return .85 })
+            .style("stroke-opacity", function(d) {return .37})
 
             function borderSwitch(v) {
                 if (v < color_Scale[0]) {
@@ -242,6 +317,7 @@
             }
             legend.append("rect").attr("x", -10).attr("y", -15).attr("height", "" + (color_Scale.length + 1) + "em").attr("width", "7em").style("fill", "none");
         };
+
         //this function changes the radius of the hexagons in hexgrid on the "#radiusSlider" change:
         function rad(subdivision) {
             $("#radiusOutput").val(subdivision); //set the output val to that of radiusSlider
